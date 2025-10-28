@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Student Grading System</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            margin: 20px; 
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { 
+            color: #2c3e50; 
+            text-align: center;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        .menu { 
+            margin: 30px 0; 
+            text-align: center;
+        }
+        button { 
+            margin: 5px; 
+            padding: 12px 20px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+        table { 
+            border-collapse: collapse; 
+            width: 100%; 
+            margin: 20px 0;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th, td { 
+            border: 1px solid #ddd; 
+            padding: 12px; 
+            text-align: left; 
+        }
+        th { 
+            background-color: #34495e; 
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tr:hover {
+            background-color: #e8f4fc;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #3498db;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .grade-A { color: #27ae60; font-weight: bold; }
+        .grade-B { color: #2980b9; font-weight: bold; }
+        .grade-C { color: #f39c12; font-weight: bold; }
+        .grade-D { color: #e67e22; font-weight: bold; }
+        .grade-F { color: #e74c3c; font-weight: bold; }
+        #output {
+            margin-top: 20px;
+            min-height: 100px;
+        }
+        .file-upload {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+            text-align: center;
+        }
+        .file-info {
+            background: #d5edff;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .student-name {
+            font-weight: bold;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Student Grading System</h1>
+        
+        <div class="file-upload">
+            <h3>📁 Upload Your Student Data File</h3>
+            <input type="file" id="fileInput" accept=".txt" />
+            <button onclick="loadRealData()">Process Student File</button>
+            <p><small>Select your "students.txt" file (supports large files up to 10MB)</small></p>
+        </div>
+
+        <div id="fileInfo" class="file-info" style="display: none;"></div>
+        
+        <div class="menu">
+            <button id="btnShowGrades" onclick="showAllGrades()" disabled>1. Show All Grades</button>
+            <button id="btnSearch" onclick="searchStudent()" disabled>2. Search Student</button>
+            <button id="btnStats" onclick="showStatistics()" disabled>3. Show Statistics</button>
+            <button id="btnDistribution" onclick="showGradeDistribution()" disabled>4. Grade Distribution</button>
+            <button id="btnTopStudents" onclick="showTopStudents()" disabled>5. Top Students</button>
+            <button id="btnSaveReport" onclick="saveReport()" disabled>6. Save Full Report</button>
+        </div>
+
+        <div id="output"></div>
+    </div>
+
+    <script>
+        let students = [];
+
+        function loadRealData() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            
+            if (!file) {
+                alert('Please select a student data file first!');
+                return;
+            }
+
+            // Show progress
+            document.getElementById('output').innerHTML = `
+                <div class="stat-card">
+                    <p>📊 Processing file: ${file.name} (${(file.size / 1024).toFixed(2)} KB)</p>
+                    <p id="progressText">Reading file...</p>
+                </div>
+            `;
+
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                const fileData = e.target.result;
+                processFileData(fileData);
+            };
+            
+            reader.onerror = function() {
+                document.getElementById('output').innerHTML = '<div class="stat-card"><p>❌ Error reading file</p></div>';
+            };
+            
+            reader.readAsText(file);
+        }
+
+        function processFileData(fileData) {
+            students = [];
+            let validLines = 0;
+            let invalidLines = 0;
+            let totalLines = 0;
+
+            const lines = fileData.split('\n');
+            totalLines = lines.length;
+
+            // Skip header line (line 1) and process from line 2
+            for (let i = 1; i < lines.length; i++) {
+                const line = lines[i].trim();
+
+                if (!line) {
+                    invalidLines++;
+                    continue; // Skip empty lines
+                }
+
+                const parts = line.split(/\s+/);
+                
+                if (parts.length < 3) {
+                    invalidLines++;
+                    continue; // Skip lines with insufficient data
+                }
+
+                try {
+                    // First two parts are name and surname, rest are grades
+                    const firstName = parts[0];
+                    const lastName = parts[1];
+                    const studentName = `${firstName} ${lastName}`;
+                    
+                    const grades = [];
+                    
+                    // Process grades (skip first two elements which are names)
+                    for (let j = 2; j < parts.length; j++) {
+                        const grade = parseInt(parts[j]);
+                        
+                        // Only include valid grades (0-10)
+                        if (!isNaN(grade) && grade >= 0 && grade <= 10) {
+                            grades.push(grade);
+                        }
+                    }
+
+                    // Only add student if they have at least one grade
+                    if (grades.length > 0) {
+                        // Convert to percentage scale (0-100) since original is 0-10
+                        const rawAverage = grades.reduce((sum, grade) => sum + grade, 0) / grades.length;
+                        const average = (rawAverage / 10) * 100; // Convert to percentage
+                        
+                        students.push({
+                            id: i, // Use line number as ID since no numeric ID provided
+                            name: studentName,
+                            firstName: firstName,
+                            lastName: lastName,
+                            grades: grades,
+                            average: average,
+                            letterGrade: assignLetterGrade(average),
+                            rawAverage: rawAverage, // Store the 0-10 scale average too
+                            lineNumber: i + 1
+                        });
+                        
+                        validLines++;
+                    } else {
+                        invalidLines++;
+                    }
+
+                } catch (error) {
+                    invalidLines++;
+                    console.warn(`Error processing line ${i + 1}:`, line, error);
+                }
+            }
+
+            // Show file info
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('fileInfo').innerHTML = `
+                <strong>📋 File Processing Complete:</strong><br>
+                ✅ Valid students: ${validLines}<br>
+                ❌ Invalid/Skipped lines: ${invalidLines}<br>
+                📊 Total lines processed: ${totalLines}<br>
+                🎯 Success rate: ${((validLines / (totalLines - 1)) * 100).toFixed(1)}%<br>
+                <small><em>Note: First line (header) was automatically skipped</em></small>
+            `;
+
+            // Enable buttons if we have data
+            if (validLines > 0) {
+                document.getElementById('btnShowGrades').disabled = false;
+                document.getElementById('btnSearch').disabled = false;
+                document.getElementById('btnStats').disabled = false;
+                document.getElementById('btnDistribution').disabled = false;
+                document.getElementById('btnTopStudents').disabled = false;
+                document.getElementById('btnSaveReport').disabled = false;
+
+                // Show initial statistics
+                showStatistics();
+            } else {
+                document.getElementById('output').innerHTML += '<div class="stat-card"><p>❌ No valid student data found.</p></div>';
+            }
+        }
+
+        function assignLetterGrade(average) {
+            if (average >= 90) return 'A';
+            if (average >= 80) return 'B';
+            if (average >= 70) return 'C';
+            if (average >= 60) return 'D';
+            return 'F';
+        }
+
+        function getGradeClass(grade) {
+            return `grade-${grade}`;
+        }
+
+        function showAllGrades() {
+            if (students.length === 0) {
+                document.getElementById('output').innerHTML = '<div class="stat-card"><p>❌ No student data loaded</p></div>';
+                return;
+            }
+
+            // Show only first 30 students
+            const displayStudents = students.slice(0, 30);
+
+            let html = `<h2>Student Grades (${students.length} total students)</h2>`;
+            html += '<table><tr><th>Name</th><th># Grades</th><th>Average (0-10)</th><th>Average (%)</th><th>Letter Grade</th><th>Performance</th></tr>';
+            
+            displayStudents.forEach(student => {
+                const gradeClass = getGradeClass(student.letterGrade);
+                let performance = '';
+                if (student.average >= 90) performance = 'Excellent';
+                else if (student.average >= 80) performance = 'Good';
+                else if (student.average >= 70) performance = 'Average';
+                else if (student.average >= 60) performance = 'Needs Improvement';
+                else performance = 'Poor';
+                
+                // Show first 6 grades only for display
+                const displayGrades = student.grades.slice(0, 6);
+                const moreGrades = student.grades.length > 6 ? `... (+${student.grades.length - 6} more)` : '';
+                
+                html += `<tr>
+                    <td class="student-name">${student.name}</td>
+                    <td>${student.grades.length}</td>
+                    <td><strong>${student.rawAverage.toFixed(2)}</strong></td>
+                    <td>${student.average.toFixed(2)}%</td>
+                    <td class="${gradeClass}">${student.letterGrade}</td>
+                    <td>${performance}</td>
+                </tr>`;
+            });
+            
+            html += '</table>';
+            
+            if (students.length > 30) {
+                html += `<div class="stat-card">
+                    <p>📊 Showing first 30 of ${students.length} students</p>
+                    <p>Use the search feature to find specific students, or save the full report to see all data.</p>
+                </div>`;
+            }
+            
+            document.getElementById('output').innerHTML = html;
+        }
+
+        function searchStudent() {
+            if (students.length === 0) {
+                document.getElementById('output').innerHTML = '<div class="stat-card"><p>❌ No student data loaded</p></div>';
+                return;
+            }
+
+            const searchTerm = prompt('Enter Student Name (first name, last name, or both):');
+            if (!searchTerm) return;
+
+            const searchLower = searchTerm.toLowerCase();
+            const foundStudents = students.filter(student => 
+                student.name.toLowerCase().includes(searchLower) ||
+                student.firstName.toLowerCase().includes(searchLower) ||
+                student.lastName.toLowerCase().includes(searchLower)
+            );
+            
+            if (foundStudents.length > 0) {
+                let html = `<h2>Found ${foundStudents.length} Student(s)</h2>`;
+                
+                foundStudents.forEach(student => {
+                    const gradeClass = getGradeClass(student.letterGrade);
+                    html += `
+                        <div class="stat-card">
+                            <h3>${student.name}</h3>
+                            <p><strong>All Grades (${student.grades.length} total):</strong> ${student.grades.join(', ')}</p>
+                            <p><strong>Average (0-10 scale):</strong> ${student.rawAverage.toFixed(2)}</p>
+                            <p><strong>Average (Percentage):</strong> ${student.average.toFixed(2)}%</p>
+                            <p><strong>Letter Grade:</strong> <span class="${gradeClass}">${student.letterGrade}</span></p>
+                            <p><strong>Performance:</strong> ${student.average >= 60 ? 'Passing' : 'Failing'}</p>
+                            <p><strong>Line in file:</strong> ${student.lineNumber}</p>
+                        </div>
+                    `;
+                });
+                
+                document.getElementById('output').innerHTML = html;
+            } else {
+                document.getElementById('output').innerHTML = '<div class="stat-card"><p>❌ No students found matching "' + searchTerm + '"</p></div>';
+            }
+        }
+
+        function showStatistics() {
+            if (students.length === 0) {
+                document.getElementById('output').innerHTML = '<div class="stat-card"><p>❌ No student data loaded</p></div>';
+                return;
+            }
+
+            const averages = students.map(s => s.average);
+            const rawAverages = students.map(s => s.rawAverage);
+            const allGrades = students.flatMap(s => s.grades);
+            
+            const stats = {
+                totalStudents: students.length,
+                overallAverage: rawAverages.reduce((a, b) => a + b, 0) / rawAverages.length,
+                overallAveragePercent: averages.reduce((a, b) => a + b, 0) / averages.length,
+                highestAverage: Math.max(...rawAverages),
+                lowestAverage: Math.min(...rawAverages),
+                highestAveragePercent: Math.max(...averages),
+                lowestAveragePercent: Math.min(...averages),
+                highestGrade: Math.max(...allGrades),
+                lowestGrade: Math.min(...allGrades),
+                passingStudents: students.filter(s => s.average >= 60).length,
+                failingStudents: students.filter(s => s.average < 60).length,
+                totalGrades: allGrades.length,
+                averageGradesPerStudent: allGrades.length / students.length
+            };
+
+            let html = `<h2>Class Statistics (${stats.totalStudents} Students)</h2>`;
+            html += '<div class="stats-grid">';
+            html += `<div class="stat-card"><strong>Total Students:</strong><br>${stats.totalStudents}</div>`;
+            html += `<div class="stat-card"><strong>Class Average (0-10):</strong><br>${stats.overallAverage.toFixed(2)}</div>`;
+            html += `<div class="stat-card"><strong>Class Average (%):</strong><br>${stats.overallAveragePercent.toFixed(2)}%</div>`;
+            html += `<div class="stat-card"><strong>Highest Average:</strong><br>${stats.highestAverage.toFixed(2)}</div>`;
+            html += `<div class="stat-card"><strong>Lowest Average:</strong><br>${stats.lowestAverage.toFixed(2)}</div>`;
+            html += `<div class="stat-card"><strong>Passing Students:</strong><br>${stats.passingStudents}</div>`;
+            html += `<div class="stat-card"><strong>Failing Students:</strong><br>${stats.failingStudents}</div>`;
+            html += `<div class="stat-card"><strong>Pass Rate:</strong><br>${((stats.passingStudents/stats.totalStudents)*100).toFixed(1)}%</div>`;
+            html += `<div class="stat-card"><strong>Total Grades:</strong><br>${stats.totalGrades}</div>`;
+            html += `<div class="stat-card"><strong>Avg Grades/Student:</strong><br>${stats.averageGradesPerStudent.toFixed(1)}</div>`;
+            html += '</div>';
+            
+            document.getElementById('output').innerHTML = html;
+        }
+
+        function showGradeDistribution() {
+            if (students.length === 0) {
+                document.getElementById('output').innerHTML = '<div class="stat-card"><p>❌ No student data loaded</p></div>';
+                return;
+            }
+
+            const distribution = {
+                'A': students.filter(s => s.letterGrade === 'A').length,
+                'B': students.filter(s => s.letterGrade === 'B').length,
+                'C': students.filter(s => s.letterGrade === 'C').length,
+                'D': students.filter(s => s.letterGrade === 'D').length,
+                'F': students.filter(s => s.letterGrade === 'F').length
+            };
+
+            let html = '<h2>Grade Distribution</h2>';
+            html += '<table><tr><th>Grade</th><th>Count</th><th>Percentage</th><th>Students</th></tr>';
+            
+            for (const [grade, count] of Object.entries(distribution)) {
+                const percentage = ((count / students.length) * 100).toFixed(1);
+                
+                // Get some example students for each grade
+                const exampleStudents = students.filter(s => s.letterGrade === grade).slice(0, 3);
+                const studentExamples = exampleStudents.map(s => s.name).join(', ');
+                const moreText = count > 3 ? `... and ${count - 3} more` : '';
+                
+                html += `<tr>
+                    <td class="${getGradeClass(grade)}">${grade}</td>
+                    <td>${count}</td>
+                    <td>${percentage}%</td>
+                    <td><small>${studentExamples} ${moreText}</small></td>
+                </tr>`;
+            }
+            
+            html += '</table>';
+            document.getElementById('output').innerHTML = html;
+        }
+
+        function showTopStudents() {
+            if (students.length === 0) {
+                document.getElementById('output').innerHTML = '<div class="stat-card"><p>❌ No student data loaded</p></div>';
+                return;
+            }
+
+            const sortedStudents = [...students].sort((a, b) => b.rawAverage - a.rawAverage);
+            const topStudents = sortedStudents.slice(0, 5);
+            
+            let html = '<h2>Top Performing Students (0-10 scale)</h2>';
+            html += '<div class="stats-grid">';
+            
+            topStudents.forEach((student, index) => {
+                const rank = index + 1;
+                const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : '🏅';
+                html += `
+                    <div class="stat-card">
+                        <strong>${medal} Rank ${rank}</strong><br>
+                        ${student.name}<br>
+                        Average: <strong>${student.rawAverage.toFixed(2)}</strong><br>
+                        Percentage: ${student.average.toFixed(2)}%<br>
+                        Grade: <span class="${getGradeClass(student.letterGrade)}">${student.letterGrade}</span>
+                    </div>
+                `;
+            });
+            
+            html += '</div>';
+            
+            // Show top 20 ranking table
+            const top20 = sortedStudents.slice(0, 20);
+            html += '<h3>Top 20 Students</h3><table><tr><th>Rank</th><th>Name</th><th>Average (0-10)</th><th>Average (%)</th><th>Grade</th><th># Grades</th></tr>';
+            top20.forEach((student, index) => {
+                html += `<tr>
+                    <td>${index + 1}</td>
+                    <td class="student-name">${student.name}</td>
+                    <td><strong>${student.rawAverage.toFixed(2)}</strong></td>
+                    <td>${student.average.toFixed(2)}%</td>
+                    <td class="${getGradeClass(student.letterGrade)}">${student.letterGrade}</td>
+                    <td>${student.grades.length}</td>
+                </tr>`;
+            });
+            html += '</table>';
+            
+            document.getElementById('output').innerHTML = html;
+        }
+
+        function saveReport() {
+            if (students.length === 0) {
+                document.getElementById('output').innerHTML = '<div class="stat-card"><p>❌ No student data loaded</p></div>';
+                return;
+            }
+
+            let report = "STUDENT GRADING SYSTEM - COMPREHENSIVE REPORT\n";
+            report += "=".repeat(50) + "\n\n";
+            
+            // Statistics section
+            const rawAverages = students.map(s => s.rawAverage);
+            const averages = students.map(s => s.average);
+            const allGrades = students.flatMap(s => s.grades);
+            const stats = {
+                totalStudents: students.length,
+                overallAverage: rawAverages.reduce((a, b) => a + b, 0) / rawAverages.length,
+                overallAveragePercent: averages.reduce((a, b) => a + b, 0) / averages.length,
+                highestAverage: Math.max(...rawAverages),
+                lowestAverage: Math.min(...rawAverages),
+                passingStudents: students.filter(s => s.average >= 60).length,
+                totalGrades: allGrades.length
+            };
+            
+            report += "CLASS SUMMARY:\n";
+            report += "-".repeat(30) + "\n";
+            report += `Total Students: ${stats.totalStudents}\n`;
+            report += `Class Average (0-10): ${stats.overallAverage.toFixed(2)}\n`;
+            report += `Class Average (%): ${stats.overallAveragePercent.toFixed(2)}%\n`;
+            report += `Highest Average: ${stats.highestAverage.toFixed(2)}\n`;
+            report += `Lowest Average: ${stats.lowestAverage.toFixed(2)}\n`;
+            report += `Passing Students: ${stats.passingStudents}/${stats.totalStudents} (${((stats.passingStudents/stats.totalStudents)*100).toFixed(1)}%)\n`;
+            report += `Total Grades Processed: ${stats.totalGrades}\n\n`;
+            
+            // Grade distribution
+            const distribution = {
+                'A': students.filter(s => s.letterGrade === 'A').length,
+                'B': students.filter(s => s.letterGrade === 'B').length,
+                'C': students.filter(s => s.letterGrade === 'C').length,
+                'D': students.filter(s => s.letterGrade === 'D').length,
+                'F': students.filter(s => s.letterGrade === 'F').length
+            };
+            
+            report += "GRADE DISTRIBUTION:\n";
+            report += "-".repeat(30) + "\n";
+            for (const [grade, count] of Object.entries(distribution)) {
+                report += `${grade}: ${count} students (${((count/stats.totalStudents)*100).toFixed(1)}%)\n`;
+            }
+            report += "\n";
+            
+            // Student details (all students, sorted by rank)
+            report += "DETAILED STUDENT RECORDS:\n";
+            report += "=".repeat(50) + "\n";
+            
+            const sortedStudents = [...students].sort((a, b) => b.rawAverage - a.rawAverage);
+            sortedStudents.forEach((student, index) => {
+                report += `\nRANK ${index + 1}:\n`;
+                report += `Student: ${student.name}\n`;
+                report += `Grades: ${student.grades.join(', ')}\n`;
+                report += `Average (0-10): ${student.rawAverage.toFixed(2)}\n`;
+                report += `Average (%): ${student.average.toFixed(2)}%\n`;
+                report += `Letter Grade: ${student.letterGrade}\n`;
+                report += `Performance: ${student.average >= 90 ? 'Excellent' : student.average >= 80 ? 'Good' : student.average >= 70 ? 'Average' : student.average >= 60 ? 'Needs Improvement' : 'Poor'}\n`;
+                report += `Number of Assignments: ${student.grades.length}\n`;
+                report += "-".repeat(40) + "\n";
+            });
+            
+            report += `\nReport generated on: ${new Date().toLocaleString()}\n`;
+            report += `Total processing time: ${students.length} students analyzed\n`;
+            
+            // Create downloadable file
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'student_comprehensive_report.txt';
+            a.click();
+            
+            document.getElementById('output').innerHTML = `
+                <div class="stat-card">
+                    <p>✅ Comprehensive report downloaded as "student_comprehensive_report.txt"</p>
+                    <p><strong>Report includes:</strong></p>
+                    <ul>
+                        <li>All ${students.length} students with names</li>
+                        <li>Complete grade distribution</li>
+                        <li>Student rankings</li>
+                        <li>Detailed statistics</li>
+                        <li>Both 0-10 scale and percentage averages</li>
+                    </ul>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
