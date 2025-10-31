@@ -1,3 +1,6 @@
+// Student Grading System
+// Created by toabiodun
+
 #include <iostream>
 #include <vector>
 #include <iomanip>
