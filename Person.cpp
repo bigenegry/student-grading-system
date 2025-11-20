@@ -1,113 +1,210 @@
-// Person class implementation
-// Created by toabiodun
+#include "Utilities.h"
 
-#include "Person.h"
-#include <algorithm>
-#include <numeric>
-
-// Constructors
-Person::Person() : firstName(""), lastName(""), exam(0), finalGrade(0.0) {}
-
-Person::Person(const std::string& first, const std::string& last) 
-    : firstName(first), lastName(last), exam(0), finalGrade(0.0) {}
-
-// Copy constructor
+Person::Person() {
+    firstName = "";
+    surName = "";
+    exam = 0;
+    grade = 0;
+    HW = {0};
+}
+Person::Person(string firstName, string surName, double exam, double grade, vector<double> HW) : firstName(firstName), surName(surName), exam(exam), grade(grade), HW(HW) {}
 Person::Person(const Person& other) {
     firstName = other.firstName;
-    lastName = other.lastName;
-    homework = other.homework;
+    surName = other.surName;
     exam = other.exam;
-    finalGrade = other.finalGrade;
+    grade = other.grade;
+    HW = other.HW;
 }
-
-// Copy assignment operator
+Person::~Person() {}
 Person& Person::operator=(const Person& other) {
     if (this != &other) {
         firstName = other.firstName;
-        lastName = other.lastName;
-        homework = other.homework;
+        surName = other.surName;
         exam = other.exam;
-        finalGrade = other.finalGrade;
+        grade = other.grade;
+        HW = other.HW;
     }
     return *this;
 }
 
-// Destructor
-Person::~Person() {
-    // Vector will automatically clean up
+
+void Person::setFirstName(const string& firstName) { this->firstName = firstName; }
+string Person::getfirstName() { return firstName; }
+
+void Person::setSurname(const string& surName) { this->surName = surName; }
+string Person::getSurname() { return surName; };
+
+void Person::setExamScore(double exam) { this->exam = exam;}
+double Person::getExamScore() { return exam; }
+
+void Person::setHomework(const vector<double> HW){ this->HW = HW; }
+vector <double> Person::getHomework() { return HW; }
+
+double Person::getGrade() { return grade; }
+
+void Person::calcFinalGrade(int n) {
+
+    if (n == 1) {
+        grade = 0.4 * average(HW) + 0.6 * exam;
+    }
+    else if (n == 2)
+        grade = 0.4 * Median(HW) + 0.6 * exam;
 }
 
-// Input method
-std::istream& operator>>(std::istream& is, Person& person) {
-    std::cout << "Enter first name: ";
-    is >> person.firstName;
-    std::cout << "Enter last name: ";
-    is >> person.lastName;
-    
-    person.homework.clear();
-    std::cout << "Enter homework scores (enter -1 to finish): ";
-    int score;
-    while (is >> score && score != -1) {
-        if (score >= 0 && score <= 10) {
-            person.homework.push_back(score);
+void Person::calcMedian()
+{   
+    grade = 0.4 * Median(HW) + 0.6 * exam; 
+}
+void Person::calcAverage()
+{
+    grade = 0.4 * average(HW) + 0.6 * exam;
+}
+
+istream& operator>>(istream& input, Person& p) {
+
+    string firstName, surName;
+    double exam;
+    vector <double> h;
+
+    cout << "\nPlease enter student's name and surname: ";
+    cin >> firstName >> surName;
+    p.setFirstName(firstName);
+    p.setSurname(surName);
+
+    cout << "1. Input Exam Score\t 2. Generate random exam Score" << endl;     // collects exam score from user
+    int n;
+
+    while(true)                                 // Loop to ask if user wants to input or generate exam score
+    {   
+        cout << "Please input option 1 or 2: ";
+        cin >> n;
+
+        if(cin.fail())
+            clearWrongInputs();
+
+        else if (n == 1)
+        {
+            cout << "\nEnter student's exam score" << endl;
+
+            while (true)              // loop to collect only valid exam score from 0 to 100
+            {
+                cout << "Please input exam score from 0 - 100:  ";
+                cin >> exam;
+
+                if (cin.fail())
+                    clearWrongInputs();
+
+                else if (exam >= 0 && exam <= 100)
+                    break;
+
+                else
+                    cout << "Invalid Score!\n";
+            }
+
+            p.setExamScore(exam);
+            break;
         }
+        else if (n == 2)
+        {
+            exam = rand() % 100 + 1;
+            cout << exam << " generated" << endl << endl;
+            p.setExamScore(exam);
+            break;
+        }
+        else 
+            cout << "Invalid selection!\n";
     }
-    
-    std::cout << "Enter exam score: ";
-    is >> person.exam;
-    
-    return is;
-}
 
-// Output method
-std::ostream& operator<<(std::ostream& os, const Person& person) {
-    os << person.firstName << " " << person.lastName << " " << person.finalGrade;
-    return os;
-}
+    cout << "\n1. Add homework\t 2.No Homework\t 3.Randomize Homework" << endl; 
+    int i; 
+  
+    while(true)                                                                     // Loop to enter homework scores
+    {
+        cout << "Please input option 1, 2 or 3: ";   
+        cin >> i;
 
-// Calculate final grade
-void Person::calculateFinalGrade(bool useAverage) {
-    if (homework.empty()) {
-        finalGrade = exam * 0.6;
-        return;
+        if (cin.fail())
+            clearWrongInputs();
+
+        else if (i == 2)
+            break;
+
+        else if (i == 1)
+        {
+            string hw;
+            int j = 0;
+
+            while (true)
+            {
+                cout << "\nPlease X to finish or Input Homework " << j + 1 << ": ";
+                cin >> hw;
+                
+                if (hw == "x" || hw == "X" )
+                    break;
+                
+                try 
+                {
+                    double hws = stod(hw);
+                    h.push_back(hws);
+                    j++;
+                }
+                catch(const invalid_argument& e)
+                {
+                    cout << "Invalid input!";
+                }
+            } 
+
+            if (!h.empty())
+            {
+                p.setHomework(h);
+                break;
+            }
+            else
+                break;
+        }
+        else if (i == 3)
+        {
+            cout << "Input number of homeworks to generate randomly: ";
+            int j;
+            
+            while(true)
+            {
+                cin >> j;
+
+                if (cin.fail())
+                {
+                    clearWrongInputs();
+                    cout << "Input a number: ";
+                }
+                else
+                    break;
+            }
+
+            for (int i = 0; i < j; i++)
+            {
+               double hw = rand() % 100 + 1.00;           // generates random number for homework between 1 and 100
+                cout << hw << " generated" << endl;
+
+                h.push_back(hw);
+            }
+
+            p.setHomework(h);
+            break;
+        }
+        else
+        {
+            cout << "Invalid selection!\n";
+        }    
     }
-    
-    double homeworkGrade;
-    if (useAverage) {
-        homeworkGrade = calculateAverage();
-    } else {
-        homeworkGrade = calculateMedian();
-    }
-    
-    finalGrade = 0.4 * homeworkGrade + 0.6 * exam;
+ 
+    return input;
 }
+ostream& operator<<(ostream& out, Person& p) {
+    cout.setf(ios::left);
+    out.width(20);
+    out << p.firstName;
+    out.width(20);
+    out << p.surName;
 
-// Calculate average of homework
-double Person::calculateAverage() const {
-    if (homework.empty()) return 0.0;
-    double sum = std::accumulate(homework.begin(), homework.end(), 0.0);
-    return sum / homework.size();
-}
-
-// Calculate median of homework
-double Person::calculateMedian() const {
-    if (homework.empty()) return 0.0;
-    
-    std::vector<int> sortedHomework = homework;
-    std::sort(sortedHomework.begin(), sortedHomework.end());
-    
-    size_t size = sortedHomework.size();
-    if (size % 2 == 0) {
-        return (sortedHomework[size/2 - 1] + sortedHomework[size/2]) / 2.0;
-    } else {
-        return sortedHomework[size/2];
-    }
-}
-
-void Person::addHomework(int score) {
-    homework.push_back(score);
-}
-
-void Person::setExam(int score) {
-    exam = score;
+    return out;
 }
