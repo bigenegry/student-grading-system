@@ -1,5 +1,5 @@
 // Person class header
-// Created by toabiodun
+// Created by bigenegry
 
 #ifndef PERSON_H
 #define PERSON_H
