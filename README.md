@@ -6,4 +6,4 @@ This application calculates student final grades based on homework and exam resu
 
 ### Average Method 
 ## Author 
-Created by toabiodun 
+Created by bigenegry 
