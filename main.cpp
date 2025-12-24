@@ -1,5 +1,5 @@
 // Student Grading System
-// Created by toabiodun
+// Created by bigenegry
 
 #include <iostream>
 #include <vector>
