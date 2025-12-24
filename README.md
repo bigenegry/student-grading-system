@@ -125,6 +125,13 @@ The user can choose the calculation method.
 - Added **Makefile** and **CMakeLists.txt**
 - Created **Final Release v1.0**
 
+- ## Note on Large Data Files
+
+Due to GitHub file size limitations, very large generated data files 
+(e.g., students1000000.txt and larger) are not included in the repository.
+These files are generated and used locally for performance testing.
+
+
 ---
 
 ## Project Structure
